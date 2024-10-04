@@ -86,3 +86,7 @@ test-rules = []
 
 [lints]
 workspace = true
+
+[[bin]]
+name = "symbol_finder"
+path = "src/main.rs"

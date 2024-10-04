@@ -276,6 +276,17 @@ impl<'a> Checker<'a> {
 }
 
 impl<'a> Checker<'a> {
+    /// Visit all nodes in the AST and defer any nodes that need to be visited later.
+    pub(crate) fn visit_all(&mut self, parsed: &'a Suite) {
+        // self.bind_builtins();
+
+        self.visit_module(parsed);
+        self.visit_body(parsed);
+
+        self.visit_deferred();
+        self.visit_exports();
+    }
+
     /// Return `true` if a [`Rule`] is disabled by a `noqa` directive.
     pub(crate) fn rule_is_ignored(&self, code: Rule, offset: TextSize) -> bool {
         // TODO(charlie): `noqa` directives are mostly enforced in `check_lines.rs`.

@@ -31,6 +31,7 @@ pub mod logging;
 pub mod message;
 mod noqa;
 pub mod packaging;
+pub mod process;
 pub mod pyproject_toml;
 pub mod registry;
 mod renamer;
