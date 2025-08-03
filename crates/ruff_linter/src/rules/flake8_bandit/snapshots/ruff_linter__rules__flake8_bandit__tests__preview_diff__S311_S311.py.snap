@@ -1,0 +1,25 @@
+---
+source: crates/ruff_linter/src/rules/flake8_bandit/mod.rs
+---
+--- Summary ---
+Removed: 0
+Added: 2
+Unchanged: 9
+
+--- Added ---
+S311.py:26:5: S311 Standard pseudo-random generators are not suitable for cryptographic purposes
+   |
+25 | # https://github.com/astral-sh/ruff/issues/15522
+26 | map(random.randrange, [])
+   |     ^^^^^^^^^^^^^^^^ S311
+27 | foo = random.randrange
+   |
+
+
+S311.py:27:7: S311 Standard pseudo-random generators are not suitable for cryptographic purposes
+   |
+25 | # https://github.com/astral-sh/ruff/issues/15522
+26 | map(random.randrange, [])
+27 | foo = random.randrange
+   |       ^^^^^^^^^^^^^^^^ S311
+   |

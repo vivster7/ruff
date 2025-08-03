@@ -1,0 +1,63 @@
+---
+source: crates/ruff_linter/src/rules/flake8_bandit/mod.rs
+---
+--- Summary ---
+Removed: 2
+Added: 4
+Unchanged: 10
+
+--- Removed ---
+S308.py:16:1: S308 Use of `mark_safe` may expose cross-site scripting vulnerabilities
+   |
+16 | @mark_safe
+   | ^^^^^^^^^^ S308
+17 | def some_func():
+18 |     return '<script>alert("evil!")</script>'
+   |
+
+
+S308.py:36:1: S308 Use of `mark_safe` may expose cross-site scripting vulnerabilities
+   |
+36 | @mark_safe
+   | ^^^^^^^^^^ S308
+37 | def some_func():
+38 |     return '<script>alert("evil!")</script>'
+   |
+
+
+
+--- Added ---
+S308.py:16:2: S308 Use of `mark_safe` may expose cross-site scripting vulnerabilities
+   |
+16 | @mark_safe
+   |  ^^^^^^^^^ S308
+17 | def some_func():
+18 |     return '<script>alert("evil!")</script>'
+   |
+
+
+S308.py:36:2: S308 Use of `mark_safe` may expose cross-site scripting vulnerabilities
+   |
+36 | @mark_safe
+   |  ^^^^^^^^^ S308
+37 | def some_func():
+38 |     return '<script>alert("evil!")</script>'
+   |
+
+
+S308.py:42:5: S308 Use of `mark_safe` may expose cross-site scripting vulnerabilities
+   |
+41 | # https://github.com/astral-sh/ruff/issues/15522
+42 | map(mark_safe, [])
+   |     ^^^^^^^^^ S308
+43 | foo = mark_safe
+   |
+
+
+S308.py:43:7: S308 Use of `mark_safe` may expose cross-site scripting vulnerabilities
+   |
+41 | # https://github.com/astral-sh/ruff/issues/15522
+42 | map(mark_safe, [])
+43 | foo = mark_safe
+   |       ^^^^^^^^^ S308
+   |
