@@ -1,0 +1,25 @@
+---
+source: crates/ruff_linter/src/rules/flake8_bandit/mod.rs
+---
+--- Summary ---
+Removed: 0
+Added: 2
+Unchanged: 24
+
+--- Added ---
+S310.py:46:5: S310 Audit URL open for permitted schemes. Allowing use of `file:` or custom schemes is often unexpected.
+   |
+45 | # https://github.com/astral-sh/ruff/issues/15522
+46 | map(urllib.request.urlopen, [])
+   |     ^^^^^^^^^^^^^^^^^^^^^^ S310
+47 | foo = urllib.request.urlopen
+   |
+
+
+S310.py:47:7: S310 Audit URL open for permitted schemes. Allowing use of `file:` or custom schemes is often unexpected.
+   |
+45 | # https://github.com/astral-sh/ruff/issues/15522
+46 | map(urllib.request.urlopen, [])
+47 | foo = urllib.request.urlopen
+   |       ^^^^^^^^^^^^^^^^^^^^^^ S310
+   |

@@ -10,7 +10,7 @@ mod tests {
     use anyhow::Result;
     use test_case::test_case;
 
-    use crate::assert_diagnostics;
+    use crate::{assert_diagnostics, assert_diagnostics_diff};
     use crate::registry::Rule;
     use crate::settings::LinterSettings;
     use crate::settings::types::PreviewMode;
@@ -106,18 +106,23 @@ mod tests {
     #[test_case(Rule::SuspiciousTelnetUsage, Path::new("S312.py"))]
     fn preview_rules(rule_code: Rule, path: &Path) -> Result<()> {
         let snapshot = format!(
-            "preview__{}_{}",
+            "preview_diff__{}_{}",
             rule_code.noqa_code(),
             path.to_string_lossy()
         );
-        let diagnostics = test_path(
+        
+        let stable_settings = LinterSettings::for_rule(rule_code);
+        let preview_settings = LinterSettings {
+            preview: PreviewMode::Enabled,
+            ..LinterSettings::for_rule(rule_code)
+        };
+        
+        assert_diagnostics_diff!(
+            snapshot,
             Path::new("flake8_bandit").join(path).as_path(),
-            &LinterSettings {
-                preview: PreviewMode::Enabled,
-                ..LinterSettings::for_rule(rule_code)
-            },
-        )?;
-        assert_diagnostics!(snapshot, diagnostics);
+            &stable_settings,
+            &preview_settings
+        );
         Ok(())
     }
 

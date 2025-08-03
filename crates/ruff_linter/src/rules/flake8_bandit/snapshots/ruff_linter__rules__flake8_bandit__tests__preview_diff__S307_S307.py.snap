@@ -1,0 +1,25 @@
+---
+source: crates/ruff_linter/src/rules/flake8_bandit/mod.rs
+---
+--- Summary ---
+Removed: 0
+Added: 2
+Unchanged: 2
+
+--- Added ---
+S307.py:16:5: S307 Use of possibly insecure function; consider using `ast.literal_eval`
+   |
+15 | # https://github.com/astral-sh/ruff/issues/15522
+16 | map(eval, [])
+   |     ^^^^ S307
+17 | foo = eval
+   |
+
+
+S307.py:17:7: S307 Use of possibly insecure function; consider using `ast.literal_eval`
+   |
+15 | # https://github.com/astral-sh/ruff/issues/15522
+16 | map(eval, [])
+17 | foo = eval
+   |       ^^^^ S307
+   |
