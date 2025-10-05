@@ -1,0 +1,44 @@
+---
+source: crates/ruff_linter/src/rules/ruff/mod.rs
+---
+RUF066 `get` imported from `requests` is not a module
+ --> RUF066_third_party.py:7:22
+  |
+5 | # ============================================================================
+6 |
+7 | from requests import get  # RUF066 - get is a function in __init__.py
+  |                      ^^^
+8 | from requests import post  # RUF066 - post is a function in __init__.py
+9 | from flask import Flask  # RUF066 - Flask is a class in __init__.py
+  |
+
+RUF066 `post` imported from `requests` is not a module
+  --> RUF066_third_party.py:8:22
+   |
+ 7 | from requests import get  # RUF066 - get is a function in __init__.py
+ 8 | from requests import post  # RUF066 - post is a function in __init__.py
+   |                      ^^^^
+ 9 | from flask import Flask  # RUF066 - Flask is a class in __init__.py
+10 | from flask import render_template  # RUF066 - render_template is a function
+   |
+
+RUF066 `Flask` imported from `flask` is not a module
+  --> RUF066_third_party.py:9:19
+   |
+ 7 | from requests import get  # RUF066 - get is a function in __init__.py
+ 8 | from requests import post  # RUF066 - post is a function in __init__.py
+ 9 | from flask import Flask  # RUF066 - Flask is a class in __init__.py
+   |                   ^^^^^
+10 | from flask import render_template  # RUF066 - render_template is a function
+   |
+
+RUF066 `render_template` imported from `flask` is not a module
+  --> RUF066_third_party.py:10:19
+   |
+ 8 | from requests import post  # RUF066 - post is a function in __init__.py
+ 9 | from flask import Flask  # RUF066 - Flask is a class in __init__.py
+10 | from flask import render_template  # RUF066 - render_template is a function
+   |                   ^^^^^^^^^^^^^^^
+11 |
+12 | # ============================================================================
+   |

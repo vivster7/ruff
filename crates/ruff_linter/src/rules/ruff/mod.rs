@@ -8,7 +8,7 @@ pub(crate) mod typing;
 #[cfg(test)]
 mod tests {
     use std::fs;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
 
     use anyhow::Result;
     use regex::Regex;
@@ -204,6 +204,26 @@ mod tests {
                     ..Default::default()
                 },
                 unresolved_target_version: PythonVersion::PY311.into(),
+                ..LinterSettings::for_rule(Rule::NonModuleImport)
+            },
+        )?;
+        assert_diagnostics!(diagnostics);
+        Ok(())
+    }
+
+    #[test]
+    fn non_module_import_third_party() -> Result<()> {
+        let mock_site_packages = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("resources/test/fixtures/ruff/mock_site_packages");
+
+        let diagnostics = test_path(
+            Path::new("ruff/RUF066_third_party.py"),
+            &LinterSettings {
+                ruff: super::settings::Settings {
+                    non_module_import_check_third_party: true,
+                    non_module_import_third_party_module_paths: vec![mock_site_packages],
+                    ..Default::default()
+                },
                 ..LinterSettings::for_rule(Rule::NonModuleImport)
             },
         )?;

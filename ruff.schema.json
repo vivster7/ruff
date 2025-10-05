@@ -2972,6 +2972,16 @@
             "null"
           ]
         },
+        "non-module-import-third-party-module-paths": {
+          "description": "Paths to third-party package directories for module detection (see `RUF066`).\n\nWhen `non-module-import.check-third-party` is enabled, these paths are used to determine whether a third-party import is a module or a symbol. Typically, these should point to your virtual environment's `site-packages` directory.\n\nWithout these paths configured, third-party checking may produce false positives.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
         "parenthesize-tuple-in-subscript": {
           "description": "Whether to prefer accessing items keyed by tuples with parentheses around the tuple (see `RUF031`).",
           "type": [

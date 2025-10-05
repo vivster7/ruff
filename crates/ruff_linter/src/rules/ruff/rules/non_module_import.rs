@@ -36,6 +36,7 @@ use crate::Violation;
 /// - `lint.ruff.non-module-import-check-stdlib`
 /// - `lint.ruff.non-module-import-check-third-party`
 /// - `lint.ruff.non-module-import-allow-modules`
+/// - `lint.ruff.non-module-import-third-party-module-paths`
 #[derive(ViolationMetadata)]
 pub(crate) struct NonModuleImport {
     module: String,
@@ -143,6 +144,17 @@ pub(crate) fn non_module_import(
         return;
     }
 
+    // Build search paths: src_dirs for first-party, third-party paths for third-party
+    let search_paths = if is_first_party || is_stdlib {
+        src_dirs.clone()
+    } else {
+        // For third-party, use configured paths
+        let mut paths = settings.non_module_import_third_party_module_paths.clone();
+        // Also include src_dirs in case they have vendored dependencies
+        paths.extend(src_dirs);
+        paths
+    };
+
     for alias in &import_from.names {
         let imported_name = alias.name.as_str();
 
@@ -159,7 +171,7 @@ pub(crate) fn non_module_import(
         };
 
         // Check if it's a module on the filesystem
-        if !is_module_on_filesystem(&full_path, &src_dirs) {
+        if !is_module_on_filesystem(&full_path, &search_paths) {
             // It's not a module, report violation
             checker.report_diagnostic(
                 NonModuleImport {

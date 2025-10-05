@@ -3487,6 +3487,23 @@ pub struct RuffOptions {
     )]
     pub non_module_import_allow_modules: Option<Vec<String>>,
 
+    /// Paths to third-party package directories for module detection (see `RUF066`).
+    ///
+    /// When `non-module-import.check-third-party` is enabled, these paths are used
+    /// to determine whether a third-party import is a module or a symbol. Typically,
+    /// these should point to your virtual environment's `site-packages` directory.
+    ///
+    /// Without these paths configured, third-party checking may produce false positives.
+    #[option(
+        default = r#"[]"#,
+        value_type = "list[str]",
+        example = r#"
+        # Specify where to find third-party packages.
+        non-module-import.third-party-module-paths = [".venv/lib/python3.11/site-packages"]
+        "#
+    )]
+    pub non_module_import_third_party_module_paths: Option<Vec<String>>,
+
     /// A list of additional callable names that behave like
     /// [`markupsafe.Markup`](https://markupsafe.palletsprojects.com/en/stable/escaping/#markupsafe.Markup).
     ///
@@ -3557,6 +3574,10 @@ impl RuffOptions {
                 .unwrap_or_default(),
             non_module_import_allow_modules: self
                 .non_module_import_allow_modules
+                .unwrap_or_default(),
+            non_module_import_third_party_module_paths: self
+                .non_module_import_third_party_module_paths
+                .map(|paths| paths.into_iter().map(PathBuf::from).collect())
                 .unwrap_or_default(),
         }
     }
