@@ -1,0 +1,72 @@
+---
+source: crates/ruff_linter/src/rules/ruff/mod.rs
+---
+RUF066 `join` imported from `os.path` is not a module
+ --> RUF066_stdlib.py:4:21
+  |
+3 | # Standard library symbol imports (violations when check_stdlib=true)
+4 | from os.path import join  # RUF066 (with check_stdlib)
+  |                     ^^^^
+5 | from collections import defaultdict  # RUF066 (with check_stdlib)
+6 | from json import loads  # RUF066 (with check_stdlib)
+  |
+
+RUF066 `defaultdict` imported from `collections` is not a module
+ --> RUF066_stdlib.py:5:25
+  |
+3 | # Standard library symbol imports (violations when check_stdlib=true)
+4 | from os.path import join  # RUF066 (with check_stdlib)
+5 | from collections import defaultdict  # RUF066 (with check_stdlib)
+  |                         ^^^^^^^^^^^
+6 | from json import loads  # RUF066 (with check_stdlib)
+  |
+
+RUF066 `loads` imported from `json` is not a module
+ --> RUF066_stdlib.py:6:18
+  |
+4 | from os.path import join  # RUF066 (with check_stdlib)
+5 | from collections import defaultdict  # RUF066 (with check_stdlib)
+6 | from json import loads  # RUF066 (with check_stdlib)
+  |                  ^^^^^
+7 |
+8 | # Python 3.9+ modules (violations when check_stdlib=true and py39+)
+  |
+
+RUF066 `TopologicalSorter` imported from `graphlib` is not a module
+  --> RUF066_stdlib.py:9:22
+   |
+ 8 | # Python 3.9+ modules (violations when check_stdlib=true and py39+)
+ 9 | from graphlib import TopologicalSorter  # RUF066 (with check_stdlib, py39+)
+   |                      ^^^^^^^^^^^^^^^^^
+10 | from zoneinfo import ZoneInfo  # RUF066 (with check_stdlib, py39+)
+   |
+
+RUF066 `ZoneInfo` imported from `zoneinfo` is not a module
+  --> RUF066_stdlib.py:10:22
+   |
+ 8 | # Python 3.9+ modules (violations when check_stdlib=true and py39+)
+ 9 | from graphlib import TopologicalSorter  # RUF066 (with check_stdlib, py39+)
+10 | from zoneinfo import ZoneInfo  # RUF066 (with check_stdlib, py39+)
+   |                      ^^^^^^^^
+11 |
+12 | # Python 3.11+ modules (violations when check_stdlib=true and py311+)
+   |
+
+RUF066 `path` imported from `os` is not a module
+  --> RUF066_stdlib.py:17:16
+   |
+15 | # These are also violations because os.path and collections.abc are submodules,
+16 | # not in our filesystem, so we can't detect them as modules
+17 | from os import path  # RUF066 (with check_stdlib) - stdlib submodule
+   |                ^^^^
+18 | from collections import abc  # RUF066 (with check_stdlib) - not in default allow-list as import target
+   |
+
+RUF066 `abc` imported from `collections` is not a module
+  --> RUF066_stdlib.py:18:25
+   |
+16 | # not in our filesystem, so we can't detect them as modules
+17 | from os import path  # RUF066 (with check_stdlib) - stdlib submodule
+18 | from collections import abc  # RUF066 (with check_stdlib) - not in default allow-list as import target
+   |                         ^^^
+   |

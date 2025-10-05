@@ -160,6 +160,57 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn non_module_import_stdlib_py38() -> Result<()> {
+        let diagnostics = test_path(
+            Path::new("ruff/RUF066_stdlib.py"),
+            &LinterSettings {
+                ruff: super::settings::Settings {
+                    non_module_import_check_stdlib: true,
+                    ..Default::default()
+                },
+                unresolved_target_version: PythonVersion::PY38.into(),
+                ..LinterSettings::for_rule(Rule::NonModuleImport)
+            },
+        )?;
+        assert_diagnostics!(diagnostics);
+        Ok(())
+    }
+
+    #[test]
+    fn non_module_import_stdlib_py39() -> Result<()> {
+        let diagnostics = test_path(
+            Path::new("ruff/RUF066_stdlib.py"),
+            &LinterSettings {
+                ruff: super::settings::Settings {
+                    non_module_import_check_stdlib: true,
+                    ..Default::default()
+                },
+                unresolved_target_version: PythonVersion::PY39.into(),
+                ..LinterSettings::for_rule(Rule::NonModuleImport)
+            },
+        )?;
+        assert_diagnostics!(diagnostics);
+        Ok(())
+    }
+
+    #[test]
+    fn non_module_import_stdlib_py311() -> Result<()> {
+        let diagnostics = test_path(
+            Path::new("ruff/RUF066_stdlib.py"),
+            &LinterSettings {
+                ruff: super::settings::Settings {
+                    non_module_import_check_stdlib: true,
+                    ..Default::default()
+                },
+                unresolved_target_version: PythonVersion::PY311.into(),
+                ..LinterSettings::for_rule(Rule::NonModuleImport)
+            },
+        )?;
+        assert_diagnostics!(diagnostics);
+        Ok(())
+    }
+
     #[test_case(Path::new("RUF013_0.py"))]
     #[test_case(Path::new("RUF013_1.py"))]
     fn implicit_optional_py39(path: &Path) -> Result<()> {

@@ -117,7 +117,8 @@ pub(crate) fn non_module_import(
 
     // Check first segment of module path to determine import type
     let module_base = module_path.split('.').next().unwrap_or("");
-    let is_stdlib = !module_base.is_empty() && is_known_standard_library(8, module_base);
+    let is_stdlib = !module_base.is_empty()
+        && is_known_standard_library(checker.target_version().minor, module_base);
 
     // Skip based on import type and settings
     if is_stdlib && !settings.non_module_import_check_stdlib {
