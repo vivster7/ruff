@@ -3440,6 +3440,53 @@ pub struct RuffOptions {
     )]
     pub parenthesize_tuple_in_subscript: Option<bool>,
 
+    /// Whether to check first-party imports for non-module imports (see `RUF066`).
+    #[option(
+        default = r#"true"#,
+        value_type = "bool",
+        example = r#"
+        # Disable checking first-party imports.
+        non-module-import.check-first-party = false
+        "#
+    )]
+    pub non_module_import_check_first_party: Option<bool>,
+
+    /// Whether to check standard library imports for non-module imports (see `RUF066`).
+    #[option(
+        default = r#"false"#,
+        value_type = "bool",
+        example = r#"
+        # Enable checking standard library imports.
+        non-module-import.check-stdlib = true
+        "#
+    )]
+    pub non_module_import_check_stdlib: Option<bool>,
+
+    /// Whether to check third-party imports for non-module imports (see `RUF066`).
+    #[option(
+        default = r#"false"#,
+        value_type = "bool",
+        example = r#"
+        # Enable checking third-party imports.
+        non-module-import.check-third-party = true
+        "#
+    )]
+    pub non_module_import_check_third_party: Option<bool>,
+
+    /// Additional modules to allow importing symbols from (see `RUF066`).
+    ///
+    /// By default, certain modules like `typing`, `__future__`, `typing_extensions`,
+    /// and `collections.abc` are allowed. Use this option to add more modules to the allow list.
+    #[option(
+        default = r#"[]"#,
+        value_type = "list[str]",
+        example = r#"
+        # Allow importing symbols from these additional modules.
+        non-module-import.allow-modules = ["myapp.constants", "myapp.types"]
+        "#
+    )]
+    pub non_module_import_allow_modules: Option<Vec<String>>,
+
     /// A list of additional callable names that behave like
     /// [`markupsafe.Markup`](https://markupsafe.palletsprojects.com/en/stable/escaping/#markupsafe.Markup).
     ///
@@ -3498,6 +3545,18 @@ impl RuffOptions {
         ruff::settings::Settings {
             parenthesize_tuple_in_subscript: self
                 .parenthesize_tuple_in_subscript
+                .unwrap_or_default(),
+            non_module_import_check_first_party: self
+                .non_module_import_check_first_party
+                .unwrap_or(true),
+            non_module_import_check_stdlib: self
+                .non_module_import_check_stdlib
+                .unwrap_or_default(),
+            non_module_import_check_third_party: self
+                .non_module_import_check_third_party
+                .unwrap_or_default(),
+            non_module_import_allow_modules: self
+                .non_module_import_allow_modules
                 .unwrap_or_default(),
         }
     }

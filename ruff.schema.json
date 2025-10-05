@@ -2941,6 +2941,37 @@
             "type": "string"
           }
         },
+        "non-module-import-allow-modules": {
+          "description": "Additional modules to allow importing symbols from (see `RUF066`).\n\nBy default, certain modules like `typing`, `__future__`, `typing_extensions`, and `collections.abc` are allowed. Use this option to add more modules to the allow list.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "non-module-import-check-first-party": {
+          "description": "Whether to check first-party imports for non-module imports (see `RUF066`).",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "non-module-import-check-stdlib": {
+          "description": "Whether to check standard library imports for non-module imports (see `RUF066`).",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "non-module-import-check-third-party": {
+          "description": "Whether to check third-party imports for non-module imports (see `RUF066`).",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "parenthesize-tuple-in-subscript": {
           "description": "Whether to prefer accessing items keyed by tuples with parentheses around the tuple (see `RUF031`).",
           "type": [
@@ -4061,6 +4092,7 @@
         "RUF063",
         "RUF064",
         "RUF065",
+        "RUF066",
         "RUF1",
         "RUF10",
         "RUF100",
