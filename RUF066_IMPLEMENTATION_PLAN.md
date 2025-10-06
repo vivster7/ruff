@@ -12,12 +12,14 @@
 Enable lazy imports in Python using `importlib.util.LazyLoader` by ensuring all imports are module-level rather than symbol-level.
 
 **Allowed:**
+
 ```python
 from foo import bar  # OK if foo/bar.py exists
 import foo.bar.baz    # OK
 ```
 
 **Violations:**
+
 ```python
 from foo.bar import MyClass      # RUF066 - importing symbol
 from foo.bar import my_function  # RUF066 - importing symbol
@@ -28,6 +30,7 @@ from foo.bar import my_function  # RUF066 - importing symbol
 Python's `importlib.util.LazyLoader` only works with module imports, not symbol imports. This rule ensures codebases that want to use lazy loading follow the required import pattern.
 
 **Why this matters:**
+
 - Lazy loading can significantly improve application startup time
 - Currently no tooling enforces the module-only import pattern
 - Manual enforcement is error-prone and time-consuming
@@ -41,17 +44,20 @@ Python's `importlib.util.LazyLoader` only works with module imports, not symbol 
 **Decision:** **On-demand checking** (check filesystem per-import)
 
 **Rationale:**
+
 1. **Architecture Fit**: Ruff processes files in parallel. A global cache would require thread-safe access and complicate the architecture.
-2. **Performance**: Filesystem stat() calls are microseconds-fast, and the OS caches results. Even 1000 imports = ~3000 stat calls = negligible.
-3. **Simplicity**: No cache invalidation, no shared state, no pre-computation overhead.
-4. **Precedent**: Ruff's existing `match_sources()` function (in `isort/categorize.rs:169`) uses on-demand filesystem checking for import categorization.
+1. **Performance**: Filesystem stat() calls are microseconds-fast, and the OS caches results. Even 1000 imports = ~3000 stat calls = negligible.
+1. **Simplicity**: No cache invalidation, no shared state, no pre-computation overhead.
+1. **Precedent**: Ruff's existing `match_sources()` function (in `isort/categorize.rs:169`) uses on-demand filesystem checking for import categorization.
 
 **Supporting Evidence:**
+
 - Typical file has ~10-20 imports, requiring ~30-60 filesystem checks
 - OS filesystem cache makes repeated checks very fast
 - Ruff already does this successfully in import categorization
 
 **Trade-offs:**
+
 - ✅ Pro: Simple, fits Ruff's architecture
 - ✅ Pro: No memory overhead
 - ✅ Pro: Works well with parallel processing
@@ -60,7 +66,7 @@ Python's `importlib.util.LazyLoader` only works with module imports, not symbol 
 **Future Optimization:**
 If profiling shows this is a bottleneck, we could add per-file caching (within a single file being linted), but this is unlikely to be needed.
 
----
+______________________________________________________________________
 
 ### Decision 2: Rule Scope (First-party, Stdlib, Third-party)
 
@@ -69,11 +75,13 @@ If profiling shows this is a bottleneck, we could add per-file caching (within a
 **Decision:** **Check first-party by default, with configuration for stdlib and third-party**
 
 **Rationale:**
+
 1. **First-party is tractable**: We have filesystem access to determine module structure
-2. **Stdlib requires knowledge**: Need to know stdlib module structure (can use `ruff_python_stdlib` crate)
-3. **Third-party requires site-packages**: Would need to scan virtual environment
+1. **Stdlib requires knowledge**: Need to know stdlib module structure (can use `ruff_python_stdlib` crate)
+1. **Third-party requires site-packages**: Would need to scan virtual environment
 
 **Default Configuration:**
+
 ```toml
 [tool.ruff.lint.non-module-import]
 check-first-party = true
@@ -82,16 +90,18 @@ check-third-party = false
 ```
 
 **Why this default:**
+
 - First-party code is what users control and want to enforce patterns on
 - Stdlib checking can be enabled later (many stdlib imports like `from os.path import join` are idiomatic)
 - Third-party checking is complex (requires venv scanning) - defer to future work
 
 **Implementation Phases:**
+
 - Phase 1 (MVP): First-party only
 - Phase 2: Stdlib support using `ruff_python_stdlib`
 - Phase 3: Third-party support (scan venv/site-packages)
 
----
+______________________________________________________________________
 
 ### Decision 3: Default Allowed Modules
 
@@ -100,23 +110,26 @@ check-third-party = false
 **Decision:** **Yes - allow `typing`, `__future__`, `typing_extensions`, and `collections.abc` by default**
 
 **Rationale:**
+
 1. **`__future__` imports**: Must be at module level, always import symbols (e.g., `from __future__ import annotations`)
-2. **`typing` imports**: Extremely common pattern (`from typing import List, Dict`), used only for type checking
-3. **`typing_extensions`**: Backports of typing features, same rationale as `typing`
-4. **`collections.abc`**: Common to import abstract base classes directly
+1. **`typing` imports**: Extremely common pattern (`from typing import List, Dict`), used only for type checking
+1. **`typing_extensions`**: Backports of typing features, same rationale as `typing`
+1. **`collections.abc`**: Common to import abstract base classes directly
 
 **User Override:**
+
 ```toml
 [tool.ruff.lint.non-module-import]
 allow-modules = ["typing", "mypy_extensions", "custom_module"]  # Override defaults
 ```
 
 **Trade-offs:**
+
 - ✅ Pro: Reduces false positives for idiomatic Python patterns
 - ✅ Pro: `typing` imports are erased at runtime, so lazy loading doesn't apply
 - ❌ Con: Less strict, but can be overridden by users who want maximum strictness
 
----
+______________________________________________________________________
 
 ### Decision 4: TYPE_CHECKING Blocks
 
@@ -125,11 +138,13 @@ allow-modules = ["typing", "mypy_extensions", "custom_module"]  # Override defau
 **Decision:** **Skip them (don't check)**
 
 **Rationale:**
+
 1. **Never executed**: `TYPE_CHECKING` is `False` at runtime, so these imports are never executed
-2. **Lazy loading irrelevant**: Since they don't run, lazy loading optimization doesn't apply
-3. **Type-only imports**: These are for type checkers only, not runtime
+1. **Lazy loading irrelevant**: Since they don't run, lazy loading optimization doesn't apply
+1. **Type-only imports**: These are for type checkers only, not runtime
 
 **Example:**
+
 ```python
 from typing import TYPE_CHECKING
 
@@ -138,19 +153,21 @@ if TYPE_CHECKING:
 ```
 
 **Implementation:**
+
 - Track when inside a `TYPE_CHECKING` block in the semantic model
 - Skip `ImportFrom` statements when in this context
 
 **Alternative Considered:**
 Checking TYPE_CHECKING blocks for consistency - rejected because it provides no value for the lazy loading use case.
 
----
+______________________________________________________________________
 
 ### Decision 5: Package Re-exports
 
 **Question:** How to handle symbols re-exported in `__init__.py`?
 
 Example:
+
 ```python
 # foo/__init__.py
 from .bar import MyClass
@@ -162,12 +179,14 @@ from foo import MyClass  # Is this a module or symbol import?
 **Decision:** **Strict - flag this as a violation (Option A)**
 
 **Rationale:**
+
 1. **Lazy loading perspective**: `MyClass` is technically a symbol, not a module
-2. **Filesystem check**: There's no `foo/MyClass.py` file, so it fails the module test
-3. **Consistency**: Clear, consistent rule - only actual modules allowed
-4. **Workaround available**: Users can do `import foo.bar` then `foo.bar.MyClass`
+1. **Filesystem check**: There's no `foo/MyClass.py` file, so it fails the module test
+1. **Consistency**: Clear, consistent rule - only actual modules allowed
+1. **Workaround available**: Users can do `import foo.bar` then `foo.bar.MyClass`
 
 **Trade-offs:**
+
 - ✅ Pro: Consistent with lazy loading requirements
 - ✅ Pro: Clear, simple rule
 - ❌ Con: Flags a common Python pattern (but users can disable rule or use `# noqa`)
@@ -175,7 +194,7 @@ from foo import MyClass  # Is this a module or symbol import?
 **Alternative Considered:**
 Allow re-exports (Option B) - rejected because it defeats the purpose of enforcing module-only imports for lazy loading.
 
----
+______________________________________________________________________
 
 ### Decision 6: Wildcard Imports
 
@@ -184,21 +203,24 @@ Allow re-exports (Option B) - rejected because it defeats the purpose of enforci
 **Decision:** **Skip them (don't check)**
 
 **Rationale:**
+
 1. **Already problematic**: Wildcard imports are discouraged by other rules (F403, F405)
-2. **Ambiguous**: Can't determine what's being imported without runtime analysis
-3. **Edge case**: Rare in well-structured codebases
-4. **Complexity**: Checking would require parsing `__all__` or analyzing the module
+1. **Ambiguous**: Can't determine what's being imported without runtime analysis
+1. **Edge case**: Rare in well-structured codebases
+1. **Complexity**: Checking would require parsing `__all__` or analyzing the module
 
 **Example:**
+
 ```python
 from foo.bar import *  # Skip - no RUF066
 ```
 
 **Alternative Considered:**
+
 - Always flag as violation - rejected as overly complex and redundant with existing rules
 - Could revisit in future if there's demand
 
----
+______________________________________________________________________
 
 ### Decision 7: Rule Code Selection
 
@@ -207,11 +229,12 @@ from foo.bar import *  # Skip - no RUF066
 **Decision:** **RUF066**
 
 **Rationale:**
+
 - Last regular RUF code is RUF065 (checked `codes.rs`)
 - RUF066 is next in sequence
 - RUF100+ are reserved for special cases (noqa-related, pyproject.toml, test rules)
 
----
+______________________________________________________________________
 
 ## Implementation Architecture
 
@@ -270,17 +293,19 @@ fn is_module_import(
 ```
 
 **Why this works:**
+
 - Converts dotted import path to filesystem path
 - Checks all configured source directories
 - Handles both packages (directories with `__init__.py`) and modules (`.py` files)
 - Handles stub files (`.pyi`)
 
 **Edge cases handled:**
+
 - Relative imports: Converted to absolute before checking
 - Multiple src directories: Checks all of them
 - Namespace packages: Regular `is_dir()` check works (no `__init__.py` required)
 
----
+______________________________________________________________________
 
 ### Integration Points
 
@@ -289,6 +314,7 @@ fn is_module_import(
 **Location:** `crates/ruff_linter/src/checkers/ast/analyze/statement.rs`
 
 **Integration:**
+
 ```rust
 Stmt::ImportFrom(
     import_from @ ast::StmtImportFrom {
@@ -314,6 +340,7 @@ Stmt::ImportFrom(
 ```
 
 **Why here:**
+
 - This is where all `ImportFrom` statements are processed
 - All other import-related rules hook in here
 - Access to all necessary context (checker, semantic model, settings)
@@ -323,7 +350,8 @@ Stmt::ImportFrom(
 **Location:** `crates/ruff_linter/src/rules/ruff/rules/non_module_import.rs`
 
 **Structure:**
-```rust
+
+````rust
 use ruff_macros::{ViolationMetadata, derive_message_formats};
 use ruff_python_ast as ast;
 use std::path::PathBuf;
@@ -368,7 +396,7 @@ pub(crate) fn non_module_import(
 ) {
     // Implementation here
 }
-```
+````
 
 #### 3. Rule Registration
 
@@ -430,13 +458,14 @@ impl Default for NonModuleImportSettings {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Implementation Plan
 
 ### Phase 1: MVP - First-Party Only
 
 **Scope:**
+
 - Check first-party imports only
 - Default allow-list (`typing`, `__future__`, etc.)
 - Skip TYPE_CHECKING blocks
@@ -444,25 +473,28 @@ impl Default for NonModuleImportSettings {
 - Basic configuration support
 
 **Files to Create/Modify:**
+
 1. `crates/ruff_linter/src/rules/ruff/rules/non_module_import.rs` - New rule implementation
-2. `crates/ruff_linter/src/rules/ruff/rules/mod.rs` - Export new rule
-3. `crates/ruff_linter/src/codes.rs` - Register RUF066
-4. `crates/ruff_linter/src/checkers/ast/analyze/statement.rs` - Hook into ImportFrom
-5. `crates/ruff_workspace/src/options.rs` - Configuration schema
-6. `crates/ruff_linter/src/rules/ruff/settings.rs` - Settings struct
-7. `crates/ruff_linter/resources/test/fixtures/ruff/RUF066.py` - Test fixtures
-8. Test file in `crates/ruff_linter/src/rules/ruff/rules/` - Snapshot tests
+1. `crates/ruff_linter/src/rules/ruff/rules/mod.rs` - Export new rule
+1. `crates/ruff_linter/src/codes.rs` - Register RUF066
+1. `crates/ruff_linter/src/checkers/ast/analyze/statement.rs` - Hook into ImportFrom
+1. `crates/ruff_workspace/src/options.rs` - Configuration schema
+1. `crates/ruff_linter/src/rules/ruff/settings.rs` - Settings struct
+1. `crates/ruff_linter/resources/test/fixtures/ruff/RUF066.py` - Test fixtures
+1. Test file in `crates/ruff_linter/src/rules/ruff/rules/` - Snapshot tests
 
 **Test Coverage:**
+
 - First-party module imports (should pass)
 - First-party symbol imports (should fail)
 - Relative imports (both module and symbol)
-- Allowed modules (typing, __future__)
+- Allowed modules (typing, **future**)
 - TYPE_CHECKING blocks (should skip)
 - Wildcard imports (should skip)
 - Configuration options
 
 **Deliverables:**
+
 - Working rule with tests
 - Documentation (auto-generated via `cargo dev generate-all`)
 - Snapshot tests
@@ -470,11 +502,13 @@ impl Default for NonModuleImportSettings {
 ### Phase 2: Standard Library Support
 
 **Scope:**
+
 - Add stdlib checking using `ruff_python_stdlib` crate
 - Configuration to enable/disable
 - Extend allow-list for common stdlib patterns
 
 **Implementation:**
+
 ```rust
 use ruff_python_stdlib::sys::is_known_standard_library;
 
@@ -498,11 +532,13 @@ Stdlib module structure varies by Python version. Need to handle this carefully 
 ### Phase 3: Third-Party Support (Future)
 
 **Scope:**
+
 - Scan site-packages/venv for installed packages
 - Build module cache for third-party packages
 - Configuration to enable/disable
 
 **Challenges:**
+
 - Finding site-packages location
 - Handling multiple Python versions
 - Performance of scanning large venvs
@@ -510,7 +546,7 @@ Stdlib module structure varies by Python version. Need to handle this carefully 
 
 **Decision:** Defer to future work, potentially separate RFC/design doc.
 
----
+______________________________________________________________________
 
 ## Testing Strategy
 
@@ -614,9 +650,10 @@ fn test_non_module_import() {
 ```
 
 **Process:**
+
 1. Run `cargo test` - will fail initially
-2. Run `cargo insta review` - review and accept snapshots
-3. Commit snapshot files with code
+1. Run `cargo insta review` - review and accept snapshots
+1. Commit snapshot files with code
 
 ### Configuration Tests
 
@@ -639,7 +676,7 @@ fn test_check_first_party_disabled() {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Open Questions & Future Considerations
 
@@ -684,6 +721,7 @@ fn test_check_first_party_disabled() {
 **Current Approach:** We skip TYPE_CHECKING blocks, so this should be fine.
 
 **Example:**
+
 ```python
 from typing import TYPE_CHECKING
 
@@ -694,38 +732,43 @@ def my_function() -> "Bar":  # Forward reference as string
     pass
 ```
 
----
+______________________________________________________________________
 
 ## Performance Considerations
 
 ### Estimated Performance Impact
 
 **Per-file cost:**
+
 - ~10-20 import statements per typical file
 - ~3 filesystem stat() calls per import being checked
 - **Total: ~30-60 stat() calls per file**
 
 **Filesystem Operations:**
+
 - `is_dir()` - checks if path is directory (~1-5 μs)
 - `is_file()` - checks if path is file (~1-5 μs)
 - OS caching makes subsequent calls faster
 
 **Projected Impact:**
+
 - For 1000-file codebase: ~30,000-60,000 stat calls
 - With modern SSD and OS caching: ~30-100ms total
 - **Negligible compared to parsing/AST analysis**
 
 **Mitigation Strategies (if needed):**
+
 1. Per-file caching: Cache results within a single file
-2. Batch stat calls: Use `try_exists()` to avoid exceptions
-3. Early termination: Stop at first match
+1. Batch stat calls: Use `try_exists()` to avoid exceptions
+1. Early termination: Stop at first match
 
 **Monitoring:**
+
 - Add to Ruff's benchmark suite
 - Profile with real-world codebases
 - Optimize only if profiling shows bottleneck
 
----
+______________________________________________________________________
 
 ## Documentation Requirements
 
@@ -733,7 +776,7 @@ def my_function() -> "Bar":  # Forward reference as string
 
 Will be generated by `cargo dev generate-all` from the violation metadata:
 
-```rust
+````rust
 /// ## What it does
 /// Checks for imports of symbols from modules, rather than importing modules directly.
 ///
@@ -763,11 +806,12 @@ Will be generated by `cargo dev generate-all` from the violation metadata:
 /// - `lint.non-module-import.check-stdlib`
 /// - `lint.non-module-import.check-third-party`
 /// - `lint.non-module-import.allow-modules`
-```
+````
 
 ### Configuration Documentation
 
 In `pyproject.toml`:
+
 ```toml
 [tool.ruff.lint.non-module-import]
 # Check first-party (local) imports (default: true)
@@ -786,49 +830,54 @@ allow-modules = ["typing", "mypy_extensions"]
 ### User Guide Addition
 
 Add to Ruff documentation explaining:
+
 - Use case (lazy imports)
 - How to enable (--select RUF066 or --preview)
 - Configuration options
 - Common patterns and workarounds
 - Integration with importlib.util.LazyLoader
 
----
+______________________________________________________________________
 
 ## Assumptions & Risks
 
 ### Assumptions
 
 1. **Filesystem Layout Assumption:**
-   - **Assumption:** Python module structure matches filesystem structure
-   - **Risk:** Dynamic imports, sys.path manipulation, or complex packaging might break this
-   - **Mitigation:** Document limitations, support `src` configuration
 
-2. **Source Directory Configuration:**
-   - **Assumption:** Users have configured `src` setting correctly
-   - **Risk:** Incorrect configuration leads to false positives/negatives
-   - **Mitigation:** Use sensible defaults (project root + src/), document clearly
+    - **Assumption:** Python module structure matches filesystem structure
+    - **Risk:** Dynamic imports, sys.path manipulation, or complex packaging might break this
+    - **Mitigation:** Document limitations, support `src` configuration
 
-3. **Performance Assumption:**
-   - **Assumption:** Filesystem stat() calls are fast enough
-   - **Risk:** Network filesystems or very large codebases might be slow
-   - **Mitigation:** Monitor performance, add caching if needed
+1. **Source Directory Configuration:**
 
-4. **TYPE_CHECKING Detection:**
-   - **Assumption:** Can reliably detect `if TYPE_CHECKING:` blocks in semantic model
-   - **Risk:** Complex boolean logic might bypass detection
-   - **Mitigation:** Conservative approach - only skip simple `if TYPE_CHECKING:` pattern
+    - **Assumption:** Users have configured `src` setting correctly
+    - **Risk:** Incorrect configuration leads to false positives/negatives
+    - **Mitigation:** Use sensible defaults (project root + src/), document clearly
+
+1. **Performance Assumption:**
+
+    - **Assumption:** Filesystem stat() calls are fast enough
+    - **Risk:** Network filesystems or very large codebases might be slow
+    - **Mitigation:** Monitor performance, add caching if needed
+
+1. **TYPE_CHECKING Detection:**
+
+    - **Assumption:** Can reliably detect `if TYPE_CHECKING:` blocks in semantic model
+    - **Risk:** Complex boolean logic might bypass detection
+    - **Mitigation:** Conservative approach - only skip simple `if TYPE_CHECKING:` pattern
 
 ### Risks & Mitigations
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| False positives due to dynamic imports | Medium | Medium | Document limitations, allow configuration exceptions |
-| Performance issues on large codebases | Low | High | Profile early, add caching if needed |
-| Stdlib checking too complex | Medium | Low | Defer to Phase 2, make it opt-in |
-| Users misconfigure `src` setting | Medium | Medium | Clear documentation, sensible defaults |
-| Integration with existing tooling | Low | Low | Follow Ruff patterns, extensive testing |
+| Risk                                   | Likelihood | Impact | Mitigation                                           |
+| -------------------------------------- | ---------- | ------ | ---------------------------------------------------- |
+| False positives due to dynamic imports | Medium     | Medium | Document limitations, allow configuration exceptions |
+| Performance issues on large codebases  | Low        | High   | Profile early, add caching if needed                 |
+| Stdlib checking too complex            | Medium     | Low    | Defer to Phase 2, make it opt-in                     |
+| Users misconfigure `src` setting       | Medium     | Medium | Clear documentation, sensible defaults               |
+| Integration with existing tooling      | Low        | Low    | Follow Ruff patterns, extensive testing              |
 
----
+______________________________________________________________________
 
 ## Success Criteria
 
@@ -836,13 +885,13 @@ Add to Ruff documentation explaining:
 
 - [ ] Rule correctly identifies symbol imports from first-party modules
 - [ ] Rule allows module imports from first-party modules
-- [ ] Default allow-list works (typing, __future__, etc.)
+- [ ] Default allow-list works (typing, **future**, etc.)
 - [ ] TYPE_CHECKING blocks are skipped
 - [ ] Wildcard imports are skipped
 - [ ] Configuration options work as expected
 - [ ] All tests pass with snapshots
 - [ ] Documentation is generated correctly
-- [ ] Performance is acceptable (<100ms overhead on 1000-file codebase)
+- [ ] Performance is acceptable (\<100ms overhead on 1000-file codebase)
 
 ### Phase 2
 
@@ -854,7 +903,7 @@ Add to Ruff documentation explaining:
 - [ ] Third-party checking works when enabled
 - [ ] Virtual environment scanning is reliable
 
----
+______________________________________________________________________
 
 ## References
 
@@ -878,24 +927,27 @@ Add to Ruff documentation explaining:
 - **isort:** Import sorting (provides import categorization patterns)
 - **mypy:** Type checker (TYPE_CHECKING pattern)
 
----
+______________________________________________________________________
 
 ## Timeline Estimate
 
 ### Phase 1: MVP (2-3 days)
+
 - Day 1: Core implementation + basic tests
 - Day 2: Configuration + comprehensive tests
 - Day 3: Documentation, polish, review
 
 ### Phase 2: Stdlib (1-2 days)
+
 - Day 1: Implementation
 - Day 2: Testing + edge cases
 
 ### Phase 3: Third-party (TBD)
+
 - Requires separate design discussion
 - Estimate: 3-5 days
 
----
+______________________________________________________________________
 
 ## Appendix: Example Usage
 
@@ -956,7 +1008,7 @@ from myapp import services  # Not loaded yet
 user = models.User()  # models module loads now
 ```
 
----
+______________________________________________________________________
 
 **Document Version:** 1.0
 **Last Updated:** 2025-10-05

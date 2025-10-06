@@ -1,42 +1,60 @@
 ---
 source: crates/ruff_linter/src/rules/ruff/mod.rs
 ---
-RUF066 [*] `my_function` imported from `foo.bar` is not a module
-  --> RUF066.py:16:21
+RUF066 [*] `MyClass` imported from `foo.bar` is not a module
+  --> RUF066.py:15:21
    |
+13 | # ============================================================================
+14 |
 15 | from foo.bar import MyClass  # RUF066
-16 | from foo.bar import my_function  # RUF066
-   |                     ^^^^^^^^^^^
-17 | from foo.baz.qux import SomeClass  # RUF066
+   |                     ^^^^^^^
+16 | # Fix: Removes this line only (same as my_function below)
    |
 help: Convert to module import and update references
+12 | # VIOLATIONS: First-party symbol imports
 13 | # ============================================================================
 14 | 
+   - from foo.bar import MyClass  # RUF066
+15 | # Fix: Removes this line only (same as my_function below)
+16 | 
+17 | from foo.bar import my_function  # RUF066
+note: This is an unsafe fix and may change runtime behavior
+
+RUF066 [*] `my_function` imported from `foo.bar` is not a module
+  --> RUF066.py:18:21
+   |
+16 | # Fix: Removes this line only (same as my_function below)
+17 |
+18 | from foo.bar import my_function  # RUF066
+   |                     ^^^^^^^^^^^
+19 | # Fix: Removes this line only (does NOT add `import foo.bar` because the rule
+20 | # can't detect that foo.bar exists in the filesystem during the test)
+   |
+help: Convert to module import and update references
 15 | from foo.bar import MyClass  # RUF066
+16 | # Fix: Removes this line only (same as my_function below)
+17 | 
    - from foo.bar import my_function  # RUF066
-16 + from foo import bar
-17 | from foo.baz.qux import SomeClass  # RUF066
-18 | 
-19 | # ============================================================================
+18 | # Fix: Removes this line only (does NOT add `import foo.bar` because the rule
+19 | # can't detect that foo.bar exists in the filesystem during the test)
+20 | 
 note: This is an unsafe fix and may change runtime behavior
 
 RUF066 [*] `SomeClass` imported from `foo.baz.qux` is not a module
-  --> RUF066.py:17:25
+  --> RUF066.py:22:25
    |
-15 | from foo.bar import MyClass  # RUF066
-16 | from foo.bar import my_function  # RUF066
-17 | from foo.baz.qux import SomeClass  # RUF066
+20 | # can't detect that foo.bar exists in the filesystem during the test)
+21 |
+22 | from foo.baz.qux import SomeClass  # RUF066
    |                         ^^^^^^^^^
-18 |
-19 | # ============================================================================
+23 | # Fix: Removes this line only (same reason as above)
    |
 help: Convert to module import and update references
-14 | 
-15 | from foo.bar import MyClass  # RUF066
-16 | from foo.bar import my_function  # RUF066
+19 | # Fix: Removes this line only (does NOT add `import foo.bar` because the rule
+20 | # can't detect that foo.bar exists in the filesystem during the test)
+21 | 
    - from foo.baz.qux import SomeClass  # RUF066
-17 + from foo.baz import qux
-18 | 
-19 | # ============================================================================
-20 | # OK: First-party module imports
+22 | # Fix: Removes this line only (same reason as above)
+23 | 
+24 | # ============================================================================
 note: This is an unsafe fix and may change runtime behavior

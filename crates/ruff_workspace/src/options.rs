@@ -3566,9 +3566,7 @@ impl RuffOptions {
             non_module_import_check_first_party: self
                 .non_module_import_check_first_party
                 .unwrap_or(true),
-            non_module_import_check_stdlib: self
-                .non_module_import_check_stdlib
-                .unwrap_or_default(),
+            non_module_import_check_stdlib: self.non_module_import_check_stdlib.unwrap_or_default(),
             non_module_import_check_third_party: self
                 .non_module_import_check_third_party
                 .unwrap_or_default(),

@@ -4,15 +4,18 @@ use anyhow::Result;
 
 use ruff_diagnostics::Edit;
 use ruff_macros::{ViolationMetadata, derive_message_formats};
-use ruff_python_semantic::{Binding, SemanticModel, Alias, MemberNameImport, ModuleNameImport, NameImport, Scope, Imported};
-use ruff_python_stdlib::sys::is_known_standard_library;
-use ruff_python_stdlib::keyword::is_keyword;
+use ruff_python_ast::Stmt;
+use ruff_python_semantic::{
+    Alias, Binding, Imported, MemberNameImport, ModuleNameImport, NameImport, Scope, SemanticModel,
+};
 use ruff_python_stdlib::builtins::is_python_builtin;
+use ruff_python_stdlib::keyword::is_keyword;
+use ruff_python_stdlib::sys::is_known_standard_library;
 use ruff_text_size::Ranged;
 
 use crate::checkers::ast::Checker;
-use crate::{Violation, FixAvailability, Fix};
 use crate::fix::edits::remove_unused_imports;
+use crate::{Fix, FixAvailability, Violation};
 
 /// ## What it does
 /// Checks for imports of symbols from modules, rather than importing modules directly.
@@ -78,11 +81,43 @@ const DEFAULT_ALLOWED_MODULES: &[&str] = &[
     "collections.abc",
 ];
 
+/// Known stdlib submodules that are importable
+/// These are not in the top-level stdlib list but are valid module imports
+const KNOWN_STDLIB_SUBMODULES: &[&str] = &[
+    "collections.abc",
+    "os.path",
+    "importlib.metadata",
+    "importlib.resources",
+    "importlib.util",
+    "importlib.abc",
+    "email.mime",
+    "email.mime.text",
+    "email.mime.multipart",
+    "email.mime.image",
+    "email.mime.audio",
+    "email.mime.base",
+    "email.mime.message",
+    "html.parser",
+    "html.entities",
+    "http.client",
+    "http.server",
+    "http.cookies",
+    "http.cookiejar",
+    "urllib.parse",
+    "urllib.request",
+    "urllib.response",
+    "urllib.error",
+    "urllib.robotparser",
+    "xml.etree",
+    "xml.etree.ElementTree",
+    "xml.dom",
+    "xml.dom.minidom",
+    "xml.sax",
+    "xml.parsers.expat",
+];
+
 /// Check if a dotted name is a module by checking the filesystem
-fn is_module_on_filesystem(
-    full_import_path: &str,
-    src_dirs: &[PathBuf],
-) -> bool {
+fn is_module_on_filesystem(full_import_path: &str, src_dirs: &[PathBuf]) -> bool {
     for src_dir in src_dirs {
         // Convert "a.b.c" to "a/b/c"
         let relative_path: PathBuf = full_import_path.split('.').collect();
@@ -109,6 +144,8 @@ fn is_module_on_filesystem(
 
 /// Check if a name is available (not shadowed) in a given scope and all reference scopes
 /// or if it's already bound to an import of the same module (which we can reuse)
+///
+/// Returns (is_available, is_reusing_existing_import)
 fn is_name_available(
     name: &str,
     module_to_import: &str,
@@ -116,10 +153,10 @@ fn is_name_available(
     import_scope: &Scope,
     semantic: &SemanticModel,
     checker: &Checker,
-) -> bool {
+) -> (bool, bool) {
     // Check keywords
     if is_keyword(name) {
-        return false;
+        return (false, false);
     }
 
     // Check builtins
@@ -128,7 +165,7 @@ fn is_name_available(
         checker.target_version().minor,
         checker.source_type.is_ipynb(),
     ) {
-        return false;
+        return (false, false);
     }
 
     // Check if available in the import's scope
@@ -144,22 +181,23 @@ fn is_name_available(
                 let qual_str = qual_name.segments().join(".");
                 if qual_str == module_to_import {
                     // It's already importing the same module - we can reuse it!
-                    return true;
+                    // Return (true, true) to indicate the name is available AND we're reusing
+                    return (true, true);
                 }
             }
         }
-        return false;
+        return (false, false);
     }
 
     // Check if available in all reference scopes
     for ref_id in binding.references() {
         let reference = semantic.reference(ref_id);
         if !semantic.is_available_in_scope(name, reference.scope_id()) {
-            return false;
+            return (false, false);
         }
     }
 
-    true
+    (true, false)
 }
 
 /// Extract parent context for unique naming
@@ -177,50 +215,90 @@ fn extract_parent_context(module_path: &str) -> Option<String> {
 }
 
 /// Find a unique name for the import that doesn't shadow anything
-/// Returns (import_name, optional_alias)
+/// Returns (import_name, optional_alias, reusing_existing_import)
 ///
 /// Tries in order:
 /// 1. Base name without alias
 /// 2. Base name with "_mod" suffix
 /// 3. Base name with parent context (e.g., "requests_adapters_mod")
 /// 4. Base name with incrementing number (e.g., "base_mod2", "base_mod3", ...)
+///
+/// The third return value indicates whether we found an existing import of the same module
+/// that we can reuse (avoiding the need to add a duplicate import statement).
 fn find_unique_import_name(
     base_name: &str,
     module_path: &str,
     binding: &Binding,
     import_scope: &Scope,
     checker: &Checker,
-) -> (String, Option<String>) {
+) -> (String, Option<String>, bool) {
     let semantic = checker.semantic();
 
     // Strategy 1: Try base name without alias
-    if is_name_available(base_name, module_path, binding, import_scope, semantic, checker) {
-        return (base_name.to_string(), None);
+    let (is_available, is_reusing) = is_name_available(
+        base_name,
+        module_path,
+        binding,
+        import_scope,
+        semantic,
+        checker,
+    );
+    if is_available {
+        return (base_name.to_string(), None, is_reusing);
     }
 
     // Strategy 2: Try with _mod suffix
     let with_mod = format!("{}_mod", base_name);
-    if is_name_available(&with_mod, module_path, binding, import_scope, semantic, checker) {
-        return (base_name.to_string(), Some(with_mod));
+    let (is_available, is_reusing) = is_name_available(
+        &with_mod,
+        module_path,
+        binding,
+        import_scope,
+        semantic,
+        checker,
+    );
+    if is_available {
+        return (base_name.to_string(), Some(with_mod), is_reusing);
     }
 
     // Strategy 3: Try with parent context
     if let Some(parent_name) = extract_parent_context(module_path) {
-        if is_name_available(&parent_name, module_path, binding, import_scope, semantic, checker) {
-            return (base_name.to_string(), Some(parent_name));
+        let (is_available, is_reusing) = is_name_available(
+            &parent_name,
+            module_path,
+            binding,
+            import_scope,
+            semantic,
+            checker,
+        );
+        if is_available {
+            return (base_name.to_string(), Some(parent_name), is_reusing);
         }
     }
 
     // Strategy 4: Try with incrementing numbers
     for i in 2..100 {
         let numbered = format!("{}_mod{}", base_name, i);
-        if is_name_available(&numbered, module_path, binding, import_scope, semantic, checker) {
-            return (base_name.to_string(), Some(numbered));
+        let (is_available, is_reusing) = is_name_available(
+            &numbered,
+            module_path,
+            binding,
+            import_scope,
+            semantic,
+            checker,
+        );
+        if is_available {
+            return (base_name.to_string(), Some(numbered), is_reusing);
         }
     }
 
     // Fallback: Use a very unique name (should rarely happen)
-    (base_name.to_string(), Some(format!("{}_mod_imported", base_name)))
+    // Not reusing since this is a fallback
+    (
+        base_name.to_string(),
+        Some(format!("{}_mod_imported", base_name)),
+        false,
+    )
 }
 
 /// Determine the import strategy for a given module path
@@ -325,11 +403,10 @@ fn generate_fix(
     binding: &Binding,
     module_path: &str,
     imported_name: &str,
+    level: u32,
     import_scope: &Scope,
     checker: &Checker,
 ) -> Result<Fix> {
-    let mut edits = Vec::new();
-
     // Get the import statement
     let Some(statement) = binding.statement(checker.semantic()) else {
         anyhow::bail!("Binding has no source statement");
@@ -347,9 +424,9 @@ fn generate_fix(
     // For "requests", we import "requests" (import requests)
     let parts: Vec<&str> = module_path.split('.').collect();
     let base_name = if parts.len() > 1 {
-        parts[parts.len() - 1]  // Last part for nested modules
+        parts[parts.len() - 1] // Last part for nested modules
     } else {
-        module_path  // Use full path for simple modules
+        module_path // Use full path for simple modules
     };
 
     // For nested modules, we want "from X import Y" not "import X"
@@ -357,39 +434,49 @@ fn generate_fix(
     // We'll generate "from os import path" and references become "path.join"
 
     // Find a unique name that doesn't shadow anything
-    let (import_name, alias) = find_unique_import_name(
-        base_name,
-        module_path,
-        binding,
-        import_scope,
-        checker,
-    );
+    let (import_name, alias, is_reusing_existing) =
+        find_unique_import_name(base_name, module_path, binding, import_scope, checker);
 
     // The prefix to use in references
     let reference_prefix = alias.as_ref().unwrap_or(&import_name);
 
     // Step 1: Update all references to use the qualified name
+    let mut reference_edits = Vec::new();
     for ref_id in binding.references() {
         let reference = checker.semantic().reference(ref_id);
         // Replace "get" with "requests.get" or "requests_mod.get"
         let new_text = format!("{}.{}", reference_prefix, imported_name);
-        edits.push(Edit::range_replacement(new_text, reference.range()));
+        reference_edits.push(Edit::range_replacement(new_text, reference.range()));
     }
 
-    // Step 2: Add the new import statement
-    // Determine what import to create based on module structure
-    let (new_import, _) = determine_import_strategy(
-        if module_path.is_empty() { None } else { Some(module_path) },
-        0, // level (0 for absolute imports, >0 for relative)
-        &import_name,
-        alias.as_deref(),
-    );
+    // Step 2: Add the new import statement (unless we're reusing an existing one)
+    let add_import_edit = if is_reusing_existing {
+        // We're reusing an existing import, so we don't need to add a new one
+        // But we still need an Edit for the structure - use an empty edit at the binding location
+        // Actually, we can skip this entirely and not include it in the edits
+        None
+    } else {
+        // Determine what import to create based on module structure
+        let (new_import, _) = determine_import_strategy(
+            if module_path.is_empty() {
+                None
+            } else {
+                Some(module_path)
+            },
+            level, // Preserve the relative import level from the original import
+            &import_name,
+            alias.as_deref(),
+        );
 
-    // Add the import after existing imports
-    let add_import_edit = checker.importer().add_import(&new_import, binding.start());
-    edits.push(add_import_edit);
+        // Add the import after existing imports
+        Some(checker.importer().add_import(&new_import, binding.start()))
+    };
 
     // Step 3: Remove the symbol from the original import statement
+    // IMPORTANT: Use imported_name (the member_name from the import, e.g., "path")
+    // NOT the bound_name (which might be an alias, e.g., "path_mod").
+    // The remove_unused_imports function needs to match the actual import statement text.
+    // For example, `from os import path as p` should remove "path", not "p".
     let remove_import_edit = remove_unused_imports(
         std::iter::once(imported_name),
         statement,
@@ -398,9 +485,40 @@ fn generate_fix(
         checker.stylist(),
         checker.indexer(),
     )?;
-    edits.push(remove_import_edit);
 
-    Ok(Fix::unsafe_edits(edits[0].clone(), edits[1..].to_vec()))
+    // Combine all edits: references + add import (if not reusing) + remove import
+    // The first edit should be the most "significant" one for display purposes
+    let mut all_edits = Vec::new();
+
+    // If we have reference edits, use the first reference edit as primary
+    let has_references = !reference_edits.is_empty();
+    if has_references {
+        all_edits.push(reference_edits[0].clone());
+        all_edits.extend(reference_edits.into_iter().skip(1));
+    }
+
+    // Add the import edit if we're not reusing an existing import
+    if let Some(import_edit) = add_import_edit {
+        if has_references {
+            all_edits.push(import_edit);
+        } else {
+            // No references - use the import addition as primary
+            all_edits.insert(0, import_edit);
+        }
+    }
+
+    // Always add the removal edit
+    all_edits.push(remove_import_edit);
+
+    // Ensure we have at least one edit
+    if all_edits.is_empty() {
+        anyhow::bail!("No edits generated for fix");
+    }
+
+    Ok(Fix::unsafe_edits(
+        all_edits[0].clone(),
+        all_edits[1..].to_vec(),
+    ))
 }
 
 /// RUF066
@@ -434,6 +552,26 @@ pub(crate) fn non_module_import(checker: &Checker, scope: &Scope) {
             continue;
         }
 
+        // Extract the import level from the original AST to check for relative imports
+        // (e.g., level=1 for "from . import foo", level=2 for "from .. import foo")
+        let level = binding
+            .source
+            .and_then(|node_id| {
+                let stmt = checker.semantic().statement(node_id);
+                if let Stmt::ImportFrom(import_from_stmt) = stmt {
+                    Some(import_from_stmt.level)
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(0);
+
+        // Skip relative imports - they're complex to handle correctly and we can't
+        // easily determine if a relative import target is a module without more context
+        if level > 0 {
+            continue;
+        }
+
         // Get the module path from the qualified name
         // qualified_name is like "requests.get", we want "requests"
         // or "requests.adapters.HTTPAdapter", we want "requests.adapters"
@@ -444,7 +582,6 @@ pub(crate) fn non_module_import(checker: &Checker, scope: &Scope) {
         let module_path = if qual_segments.len() > 1 {
             qual_segments[..qual_segments.len() - 1].join(".")
         } else {
-            // Edge case: relative import like `from . import foo`
             String::new()
         };
 
@@ -454,7 +591,11 @@ pub(crate) fn non_module_import(checker: &Checker, scope: &Scope) {
         }
 
         // Skip if module is in the user-configured allow-list
-        if settings.non_module_import_allow_modules.iter().any(|m| m == &module_path) {
+        if settings
+            .non_module_import_allow_modules
+            .iter()
+            .any(|m| m == &module_path)
+        {
             continue;
         }
 
@@ -491,9 +632,12 @@ pub(crate) fn non_module_import(checker: &Checker, scope: &Scope) {
         };
 
         // Get the imported member name (e.g., "path" from "from os import path as path_mod")
+        // This is what appears in the import statement itself, not any alias.
         let member_name = import_from.member_name();
 
         // Also get the bound name for the diagnostic message
+        // This is what the symbol is bound to in the local scope, which may include an alias.
+        // For `from os import path as p`, member_name is "path" and bound_name is "p".
         let bound_name = binding.name(checker.source());
 
         // Build full import path: "module.name"
@@ -503,8 +647,20 @@ pub(crate) fn non_module_import(checker: &Checker, scope: &Scope) {
             format!("{}.{}", module_path, member_name)
         };
 
-        // Check if it's a module on the filesystem
-        if !is_module_on_filesystem(&full_path, &search_paths) {
+        // Check if it's a module:
+        // 1. For stdlib, check if the full path is a known stdlib module or submodule
+        // 2. Otherwise, check the filesystem
+        let is_module = if is_stdlib {
+            // For stdlib, check if the full path is a known module
+            // This handles cases like `from collections import abc` where abc is a submodule
+            is_known_standard_library(checker.target_version().minor, &full_path)
+                || KNOWN_STDLIB_SUBMODULES.contains(&full_path.as_str())
+        } else {
+            // For first-party and third-party, check the filesystem
+            is_module_on_filesystem(&full_path, &search_paths)
+        };
+
+        if !is_module {
             // It's not a module, report violation
             let mut diagnostic = checker.report_diagnostic(
                 NonModuleImport {
@@ -516,7 +672,9 @@ pub(crate) fn non_module_import(checker: &Checker, scope: &Scope) {
 
             // Try to generate a fix
             // Pass the member name (not bound name) so remove_unused_imports works correctly
-            if let Ok(fix) = generate_fix(binding, &module_path, &member_name, scope, checker) {
+            if let Ok(fix) =
+                generate_fix(binding, &module_path, &member_name, level, scope, checker)
+            {
                 diagnostic.set_fix(fix);
             }
         }

@@ -2448,6 +2448,11 @@ requires-python = ">= 3.11"
         linter.pylint.max_nested_blocks = 5
         linter.pyupgrade.keep_runtime_typing = false
         linter.ruff.parenthesize_tuple_in_subscript = false
+        linter.ruff.non_module_import_check_first_party = true
+        linter.ruff.non_module_import_check_stdlib = false
+        linter.ruff.non_module_import_check_third_party = false
+        linter.ruff.non_module_import_allow_modules = []
+        linter.ruff.non_module_import_third_party_module_paths = []
 
         # Formatter Settings
         formatter.exclude = []
@@ -2762,6 +2767,11 @@ requires-python = ">= 3.11"
         linter.pylint.max_nested_blocks = 5
         linter.pyupgrade.keep_runtime_typing = false
         linter.ruff.parenthesize_tuple_in_subscript = false
+        linter.ruff.non_module_import_check_first_party = true
+        linter.ruff.non_module_import_check_stdlib = false
+        linter.ruff.non_module_import_check_third_party = false
+        linter.ruff.non_module_import_allow_modules = []
+        linter.ruff.non_module_import_third_party_module_paths = []
 
         # Formatter Settings
         formatter.exclude = []
@@ -3075,6 +3085,11 @@ requires-python = ">= 3.11"
         linter.pylint.max_nested_blocks = 5
         linter.pyupgrade.keep_runtime_typing = false
         linter.ruff.parenthesize_tuple_in_subscript = false
+        linter.ruff.non_module_import_check_first_party = true
+        linter.ruff.non_module_import_check_stdlib = false
+        linter.ruff.non_module_import_check_third_party = false
+        linter.ruff.non_module_import_allow_modules = []
+        linter.ruff.non_module_import_third_party_module_paths = []
 
         # Formatter Settings
         formatter.exclude = []
@@ -3440,6 +3455,11 @@ from typing import Union;foo: Union[int, str] = 1
         linter.pylint.max_nested_blocks = 5
         linter.pyupgrade.keep_runtime_typing = false
         linter.ruff.parenthesize_tuple_in_subscript = false
+        linter.ruff.non_module_import_check_first_party = true
+        linter.ruff.non_module_import_check_stdlib = false
+        linter.ruff.non_module_import_check_third_party = false
+        linter.ruff.non_module_import_allow_modules = []
+        linter.ruff.non_module_import_third_party_module_paths = []
 
         # Formatter Settings
         formatter.exclude = []
@@ -3821,6 +3841,11 @@ from typing import Union;foo: Union[int, str] = 1
         linter.pylint.max_nested_blocks = 5
         linter.pyupgrade.keep_runtime_typing = false
         linter.ruff.parenthesize_tuple_in_subscript = false
+        linter.ruff.non_module_import_check_first_party = true
+        linter.ruff.non_module_import_check_stdlib = false
+        linter.ruff.non_module_import_check_third_party = false
+        linter.ruff.non_module_import_allow_modules = []
+        linter.ruff.non_module_import_third_party_module_paths = []
 
         # Formatter Settings
         formatter.exclude = []
@@ -4150,6 +4175,11 @@ from typing import Union;foo: Union[int, str] = 1
         linter.pylint.max_nested_blocks = 5
         linter.pyupgrade.keep_runtime_typing = false
         linter.ruff.parenthesize_tuple_in_subscript = false
+        linter.ruff.non_module_import_check_first_party = true
+        linter.ruff.non_module_import_check_stdlib = false
+        linter.ruff.non_module_import_check_third_party = false
+        linter.ruff.non_module_import_allow_modules = []
+        linter.ruff.non_module_import_third_party_module_paths = []
 
         # Formatter Settings
         formatter.exclude = []
@@ -4479,6 +4509,11 @@ from typing import Union;foo: Union[int, str] = 1
         linter.pylint.max_nested_blocks = 5
         linter.pyupgrade.keep_runtime_typing = false
         linter.ruff.parenthesize_tuple_in_subscript = false
+        linter.ruff.non_module_import_check_first_party = true
+        linter.ruff.non_module_import_check_stdlib = false
+        linter.ruff.non_module_import_check_third_party = false
+        linter.ruff.non_module_import_allow_modules = []
+        linter.ruff.non_module_import_third_party_module_paths = []
 
         # Formatter Settings
         formatter.exclude = []
@@ -4765,6 +4800,11 @@ from typing import Union;foo: Union[int, str] = 1
         linter.pylint.max_nested_blocks = 5
         linter.pyupgrade.keep_runtime_typing = false
         linter.ruff.parenthesize_tuple_in_subscript = false
+        linter.ruff.non_module_import_check_first_party = true
+        linter.ruff.non_module_import_check_stdlib = false
+        linter.ruff.non_module_import_check_third_party = false
+        linter.ruff.non_module_import_allow_modules = []
+        linter.ruff.non_module_import_third_party_module_paths = []
 
         # Formatter Settings
         formatter.exclude = []
@@ -5104,6 +5144,11 @@ from typing import Union;foo: Union[int, str] = 1
         linter.pylint.max_nested_blocks = 5
         linter.pyupgrade.keep_runtime_typing = false
         linter.ruff.parenthesize_tuple_in_subscript = false
+        linter.ruff.non_module_import_check_first_party = true
+        linter.ruff.non_module_import_check_stdlib = false
+        linter.ruff.non_module_import_check_third_party = false
+        linter.ruff.non_module_import_allow_modules = []
+        linter.ruff.non_module_import_third_party_module_paths = []
 
         # Formatter Settings
         formatter.exclude = []

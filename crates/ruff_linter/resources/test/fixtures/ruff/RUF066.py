@@ -13,8 +13,14 @@
 # ============================================================================
 
 from foo.bar import MyClass  # RUF066
+# Fix: Removes this line only (same as my_function below)
+
 from foo.bar import my_function  # RUF066
+# Fix: Removes this line only (does NOT add `import foo.bar` because the rule
+# can't detect that foo.bar exists in the filesystem during the test)
+
 from foo.baz.qux import SomeClass  # RUF066
+# Fix: Removes this line only (same reason as above)
 
 # ============================================================================
 # OK: First-party module imports
@@ -40,7 +46,7 @@ from collections.abc import Mapping  # OK - collections.abc in allow-list
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from foo.bar import MyClass  # OK - inside TYPE_CHECKING block
+    from foo.bar import AnotherClass  # OK - inside TYPE_CHECKING block
 
 # ============================================================================
 # OK: Wildcard imports (skipped)

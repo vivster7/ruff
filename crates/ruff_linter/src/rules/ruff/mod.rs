@@ -164,7 +164,8 @@ mod tests {
     fn non_module_import() -> Result<()> {
         let diagnostics = test_path(
             Path::new("ruff/RUF066.py"),
-            &LinterSettings::for_rule(Rule::NonModuleImport).with_target_version(PythonVersion::PY38),
+            &LinterSettings::for_rule(Rule::NonModuleImport)
+                .with_target_version(PythonVersion::PY38),
         )?;
         assert_diagnostics!(diagnostics);
         Ok(())
