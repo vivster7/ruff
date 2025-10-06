@@ -1,0 +1,42 @@
+---
+source: crates/ruff_linter/src/rules/ruff/mod.rs
+---
+RUF066 [*] `my_function` imported from `foo.bar` is not a module
+  --> RUF066.py:16:21
+   |
+15 | from foo.bar import MyClass  # RUF066
+16 | from foo.bar import my_function  # RUF066
+   |                     ^^^^^^^^^^^
+17 | from foo.baz.qux import SomeClass  # RUF066
+   |
+help: Convert to module import and update references
+13 | # ============================================================================
+14 | 
+15 | from foo.bar import MyClass  # RUF066
+   - from foo.bar import my_function  # RUF066
+16 + from foo import bar
+17 | from foo.baz.qux import SomeClass  # RUF066
+18 | 
+19 | # ============================================================================
+note: This is an unsafe fix and may change runtime behavior
+
+RUF066 [*] `SomeClass` imported from `foo.baz.qux` is not a module
+  --> RUF066.py:17:25
+   |
+15 | from foo.bar import MyClass  # RUF066
+16 | from foo.bar import my_function  # RUF066
+17 | from foo.baz.qux import SomeClass  # RUF066
+   |                         ^^^^^^^^^
+18 |
+19 | # ============================================================================
+   |
+help: Convert to module import and update references
+14 | 
+15 | from foo.bar import MyClass  # RUF066
+16 | from foo.bar import my_function  # RUF066
+   - from foo.baz.qux import SomeClass  # RUF066
+17 + from foo.baz import qux
+18 | 
+19 | # ============================================================================
+20 | # OK: First-party module imports
+note: This is an unsafe fix and may change runtime behavior

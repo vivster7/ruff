@@ -23,6 +23,7 @@ pub(crate) fn deferred_scopes(checker: &Checker) {
         Rule::MutableClassDefault,
         Rule::MutableDataclassDefault,
         Rule::NoSelfUse,
+        Rule::NonModuleImport,
         Rule::RedefinedArgumentFromLocal,
         Rule::RedefinedWhileUnused,
         Rule::RuntimeImportInTypeCheckingBlock,
@@ -230,6 +231,10 @@ pub(crate) fn deferred_scopes(checker: &Checker) {
                 if checker.target_version() >= PythonVersion::PY37 {
                     pyupgrade::rules::unnecessary_future_import(checker, scope);
                 }
+            }
+
+            if checker.is_rule_enabled(Rule::NonModuleImport) {
+                ruff::rules::non_module_import(checker, scope);
             }
 
             if checker.is_rule_enabled(Rule::ImportPrivateName) {

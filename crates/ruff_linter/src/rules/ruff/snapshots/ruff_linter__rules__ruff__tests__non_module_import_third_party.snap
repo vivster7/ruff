@@ -1,44 +1,84 @@
 ---
 source: crates/ruff_linter/src/rules/ruff/mod.rs
 ---
-RUF066 `get` imported from `requests` is not a module
- --> RUF066_third_party.py:7:22
-  |
-5 | # ============================================================================
-6 |
-7 | from requests import get  # RUF066 - get is a function in __init__.py
-  |                      ^^^
-8 | from requests import post  # RUF066 - post is a function in __init__.py
-9 | from flask import Flask  # RUF066 - Flask is a class in __init__.py
-  |
-
-RUF066 `post` imported from `requests` is not a module
-  --> RUF066_third_party.py:8:22
+RUF066 [*] `get` imported from `requests` is not a module
+  --> RUF066_third_party.py:13:22
    |
- 7 | from requests import get  # RUF066 - get is a function in __init__.py
- 8 | from requests import post  # RUF066 - post is a function in __init__.py
+11 | # which may create duplicates that would typically be cleaned up by import sorting tools.
+12 |
+13 | from requests import get  # RUF066 - get is a function in __init__.py
+   |                      ^^^
+14 | from requests import post  # RUF066 - post is a function in __init__.py
+15 | from flask import Flask  # RUF066 - Flask is a class in __init__.py
+   |
+help: Convert to module import and update references
+10 | # The fix uses an alias to avoid shadowing. Each fix also adds its own import statement,
+11 | # which may create duplicates that would typically be cleaned up by import sorting tools.
+12 | 
+   - from requests import get  # RUF066 - get is a function in __init__.py
+13 + import requests as requests_mod
+14 | from requests import post  # RUF066 - post is a function in __init__.py
+15 | from flask import Flask  # RUF066 - Flask is a class in __init__.py
+16 | from flask import render_template  # RUF066 - render_template is a function
+note: This is an unsafe fix and may change runtime behavior
+
+RUF066 [*] `post` imported from `requests` is not a module
+  --> RUF066_third_party.py:14:22
+   |
+13 | from requests import get  # RUF066 - get is a function in __init__.py
+14 | from requests import post  # RUF066 - post is a function in __init__.py
    |                      ^^^^
- 9 | from flask import Flask  # RUF066 - Flask is a class in __init__.py
-10 | from flask import render_template  # RUF066 - render_template is a function
+15 | from flask import Flask  # RUF066 - Flask is a class in __init__.py
+16 | from flask import render_template  # RUF066 - render_template is a function
    |
+help: Convert to module import and update references
+11 | # which may create duplicates that would typically be cleaned up by import sorting tools.
+12 | 
+13 | from requests import get  # RUF066 - get is a function in __init__.py
+   - from requests import post  # RUF066 - post is a function in __init__.py
+14 + import requests as requests_mod
+15 | from flask import Flask  # RUF066 - Flask is a class in __init__.py
+16 | from flask import render_template  # RUF066 - render_template is a function
+17 | 
+note: This is an unsafe fix and may change runtime behavior
 
-RUF066 `Flask` imported from `flask` is not a module
-  --> RUF066_third_party.py:9:19
+RUF066 [*] `Flask` imported from `flask` is not a module
+  --> RUF066_third_party.py:15:19
    |
- 7 | from requests import get  # RUF066 - get is a function in __init__.py
- 8 | from requests import post  # RUF066 - post is a function in __init__.py
- 9 | from flask import Flask  # RUF066 - Flask is a class in __init__.py
+13 | from requests import get  # RUF066 - get is a function in __init__.py
+14 | from requests import post  # RUF066 - post is a function in __init__.py
+15 | from flask import Flask  # RUF066 - Flask is a class in __init__.py
    |                   ^^^^^
-10 | from flask import render_template  # RUF066 - render_template is a function
+16 | from flask import render_template  # RUF066 - render_template is a function
    |
+help: Convert to module import and update references
+12 | 
+13 | from requests import get  # RUF066 - get is a function in __init__.py
+14 | from requests import post  # RUF066 - post is a function in __init__.py
+   - from flask import Flask  # RUF066 - Flask is a class in __init__.py
+15 + import flask as flask_mod
+16 | from flask import render_template  # RUF066 - render_template is a function
+17 | 
+18 | # ============================================================================
+note: This is an unsafe fix and may change runtime behavior
 
-RUF066 `render_template` imported from `flask` is not a module
-  --> RUF066_third_party.py:10:19
+RUF066 [*] `render_template` imported from `flask` is not a module
+  --> RUF066_third_party.py:16:19
    |
- 8 | from requests import post  # RUF066 - post is a function in __init__.py
- 9 | from flask import Flask  # RUF066 - Flask is a class in __init__.py
-10 | from flask import render_template  # RUF066 - render_template is a function
+14 | from requests import post  # RUF066 - post is a function in __init__.py
+15 | from flask import Flask  # RUF066 - Flask is a class in __init__.py
+16 | from flask import render_template  # RUF066 - render_template is a function
    |                   ^^^^^^^^^^^^^^^
-11 |
-12 | # ============================================================================
+17 |
+18 | # ============================================================================
    |
+help: Convert to module import and update references
+13 | from requests import get  # RUF066 - get is a function in __init__.py
+14 | from requests import post  # RUF066 - post is a function in __init__.py
+15 | from flask import Flask  # RUF066 - Flask is a class in __init__.py
+   - from flask import render_template  # RUF066 - render_template is a function
+16 + import flask as flask_mod
+17 | 
+18 | # ============================================================================
+19 | # OK: Third-party module imports
+note: This is an unsafe fix and may change runtime behavior

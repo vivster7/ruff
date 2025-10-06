@@ -3,6 +3,12 @@
 # ============================================================================
 # VIOLATIONS: Third-party symbol imports (when check-third-party=true)
 # ============================================================================
+#
+# Note: The autofix for these violations will use `_mod` suffix (e.g., `requests_mod`)
+# because each diagnostic fix is generated independently, and at the time of fix generation,
+# the name `requests` is already bound to the existing `import requests` on line 29.
+# The fix uses an alias to avoid shadowing. Each fix also adds its own import statement,
+# which may create duplicates that would typically be cleaned up by import sorting tools.
 
 from requests import get  # RUF066 - get is a function in __init__.py
 from requests import post  # RUF066 - post is a function in __init__.py
